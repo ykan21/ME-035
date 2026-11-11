@@ -11,12 +11,13 @@ import gc
 from BLE_CEEO import Yell
 
 # "run"    -> remote-controlled car
+# "train"  -> record fresh color samples into knn_train.csv (do this FIRST on the new course)
 # "motors" -> test wheel direction (both should roll forward)
 # "red"    -> live readout of what the color sensors see (tune finish-line detection)
 MODE = "run"
 
 # ======================= CONFIG =======================
-NAME = "team1car"                # BLE name: must match controller_ble.py and be unique in the class
+NAME = "ESP_SY"                # BLE name: must match controller_ble.py and be unique in the class
 
 # Motors (same as the line follower)
 RIGHT_A, RIGHT_B = 12, 13
@@ -375,6 +376,43 @@ def celebrate_robot():
 
 
 # ---------- Modes ----------
+def train():
+    """Record fresh KNN training samples and save them to knn_train.csv (overwrites it)."""
+    sL, sR = make_sensors()
+    N = 80                                   # samples per sensor per surface (~4 seconds each)
+    plan = (
+        ("WHITE", "the normal FLOOR the car will drive on", False),
+        ("RED", "the RED finish-line tape (center the sensor on the tape)", False),
+        ("LINE", "any OTHER surface or tape the car might cross, e.g. black tape", True),
+    )
+    sensors = (("L", sL, "LEFT"), ("R", sR, "RIGHT"))
+    rows = 0
+    with open(TRAIN_FILE, "w") as f:
+        for label, desc, optional in plan:
+            for side, sensor, name in sensors:
+                ask = "\nPut the %s sensor over %s.\nPress Enter to record%s: " % (
+                    name, desc, " (or type s + Enter to skip this one)" if optional else "")
+                ans = input(ask).strip().lower()
+                if optional and ans == "s":
+                    break
+                print("  recording %s / %s ... slide the car slowly around over that surface" % (label, name))
+                for _ in range(N):
+                    try:
+                        w = sensor.read()
+                    except OSError:
+                        time.sleep_ms(50)
+                        continue
+                    c = _chroma(w[:3])
+                    if c is None:
+                        continue
+                    r = refl(w[3], CAL[side][0], CAL[side][1])
+                    f.write("%s,%.5f,%.5f,%.5f,%.4f,%s\n" % (side, c[0], c[1], c[2], r, label))
+                    rows += 1
+                    time.sleep_ms(50)
+    print("\nSaved %d samples to %s." % (rows, TRAIN_FILE))
+    print('Next: set MODE = "red", run it, and roll the car over the red tape to check detection.')
+
+
 def motor_test():
     print("Left forward 1s, then Right forward 1s...")
     drive(0.35, 0)
@@ -499,7 +537,9 @@ def run():
         time.sleep(1)
 
 
-if MODE == "motors":
+if MODE == "train":
+    train()
+elif MODE == "motors":
     motor_test()
 elif MODE == "red":
     red_view()
