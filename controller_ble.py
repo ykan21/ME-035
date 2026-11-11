@@ -14,12 +14,12 @@ from machine import Pin, ADC, PWM
 MODE = "run"
 
 # ======================= CONFIG =======================
-NAME = "team1car"                # BLE name: must match rc_car_ble.py and be unique in the class
+NAME = "ESP_SY"                # BLE name: must match rc_car_ble.py and be unique in the class
 
 # Joystick: the two analog outputs of the Grove port (use ADC-capable pins).
 JOY_X_PIN = 32                   # joystick X (D32)
 JOY_Y_PIN = 39                   # joystick Y (D39)
-JOY_X_INVERT = True              # D32 reads HIGHER when pushed left, so flip it
+JOY_X_INVERT = False              # D32 reads HIGHER when pushed left, so flip it
 JOY_Y_INVERT = False             # flip if pushing UP makes the car go BACKWARD
 DEADZONE = 0.12                  # ignore small wobble around center
 THROW = 0.90                     # joystick usually only reaches ~90% of the ADC range
